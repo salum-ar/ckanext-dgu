@@ -10,11 +10,11 @@ import json
 import re
 
 from nose.tools import assert_equal, assert_raises
-
+from nose.plugins.skip import SkipTest
 import paste.fixture
 
 from ckanext.dgu.tests import Gov3Fixtures
-import ckanext.dgu.lib.helpers
+from ckanext.dgu.lib import helpers
 
 import ckan
 from ckan.lib.create_test_data import CreateTestData
@@ -72,7 +72,7 @@ class TestFormRendering(WsgiAppCase, HtmlCheckMethods, CommonFixtureMethods):
         'tag_string':           ('Tags', 'input'),
         'mandate':              ('Mandate', 'input'),
         'license_id':           ('Licence:', 'select'),
-        'access_constraints':   (None, 'textarea'),
+        'licence':        (None, 'textarea'),
 
         # Additional resources section
         'additional_resources__0__description': (None, 'input'),
@@ -264,7 +264,7 @@ class TestFormRendering(WsgiAppCase, HtmlCheckMethods, CommonFixtureMethods):
             for field_name in [f for f in self._expected_fields if f.startswith(resource_type)]:
                 fields.append(field_name.split('__')[-1])
 
-            resources = getattr(ckanext.dgu.lib.helpers, resource_type)(package)
+            resources = getattr(helpers, resource_type)(package)
             for index, resource in enumerate(resources):
                 for field in fields:
                     # eg. additional_resources__0__url
@@ -392,8 +392,7 @@ class TestFormValidation(object):
         """Asserts that the abstract cannot be empty"""
         data = {'notes': ''}
         response = self._form_client.post_form(data)
-        assert 'Missing value' in response.body
-        assert '<b>Unique identifier: </b>' in response.body
+        assert 'Description:</b> Missing value' in response.body
 
     def test_individual_resource_url_non_empty(self):
         """Asserts that individual resources must have url defined"""
@@ -537,15 +536,16 @@ class TestFormValidation(object):
         """
         data = {'license_id': ""}
         response = self._form_client.post_form(data)
-        assert_in('Licence:</b> Please enter the access constraints.', response.body)
+        assert_in('Licence:</b> Please provide the licence.', response.body)
 
     def test_cannot_name_another_license_if_declaring_the_dataset_to_be_ogl_licensed(self):
         """
-        Asserts that if specifying an ogl license, then the user cannot fill the license id themselves
+        Asserts that if specifying an ogl license, the free form licence value is ignored (it is not shown in the form anyway).
         """
-        data = {'license_id': 'uk-ogl', 'access_constraints': 'A difference license'}
-        response = self._form_client.post_form(data)
-        assert 'Licence:</b> Leave the "Access Constraints" box empty if selecting a license from the list' in response, response
+        data = {'license_id': 'uk-ogl', 'licence': 'A difference license'}
+        response = str(self._form_client.post_form(data))
+        print response[:10000]
+        assert 'Licence:</b>' not in response
 
 class TestPackageCreation(CommonFixtureMethods):
     """
@@ -607,7 +607,7 @@ class TestPackageCreation(CommonFixtureMethods):
         # Timeseries data
         expected_timeseries_keys = filter(lambda k: k.startswith('timeseries_resources'),
                                           package_data.keys())
-        timeseries_resources = ckanext.dgu.lib.helpers.timeseries_resources(pkg.as_dict())
+        timeseries_resources = helpers.timeseries_resources(pkg.as_dict())
         assert_equal(len(timeseries_resources), 4)
         for key in expected_timeseries_keys:
             index, field = key.split('__')[1:]
@@ -641,7 +641,7 @@ class TestPackageCreation(CommonFixtureMethods):
         # Additional resources
         expected_additional_keys = filter(lambda k: k.startswith('additional_resources'),
                                           package_data.keys())
-        additional_resources = ckanext.dgu.lib.helpers.additional_resources(pkg.as_dict())
+        additional_resources = helpers.additional_resources(pkg.as_dict())
         assert_equal(len(additional_resources), 2)
         for key in expected_additional_keys:
             index, field = key.split('__')[1:]
@@ -650,7 +650,8 @@ class TestPackageCreation(CommonFixtureMethods):
                          additional_resources[index][field])
 
         assert_equal(package_data['mandate'], pkg.extras['mandate'])
-        assert_equal(package_data['access_constraints'], pkg.license_id)
+        assert_equal(package_data['license_id'] or None, pkg.license_id or None)
+        assert_equal(package_data['licence'], pkg.extras['licence'])
 
         assert_equal(package_data['temporal_coverage-from'], DateType.db_to_form(pkg.extras['temporal_coverage-from']))
         assert_equal(package_data['temporal_coverage-to'], DateType.db_to_form(pkg.extras['temporal_coverage-to']))
@@ -761,6 +762,8 @@ class TestAuthorization(WsgiAppCase):
         _drop_sysadmin()
 
     def assert_create_or_edit(self, create_or_edit, user_name, allowed=True):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for user tree stuff")
         if create_or_edit == 'create':
             package_data = _EXAMPLE_TIMESERIES_DATA.copy()
             package_data['name'] = 'tstcreate' + user_name
@@ -981,7 +984,7 @@ _EXAMPLE_FORM_DATA = {
 
         # The rest
         'mandate'               : 'http://example.com/mandate',
-        'access_constraints'    : 'Free-from license',
+        'licence'               : 'Free-form license',
         'license_id'            : '',
         'temporal_coverage-from': '1/1/2010',
         'temporal_coverage-to'  : '1/1/2012',
@@ -1043,4 +1046,4 @@ _EXAMPLE_GROUPS = [
      'title': 'Publisher Two'},
 ]
 
-_UKLP_DATASET = json.loads('{"maintainer": null, "maintainer_email": null, "metadata_created": "2011-06-03T12:17:54.351438", "relationships": [], "metadata_modified": "2011-12-22T16:40:15.831307", "author": null, "author_email": null, "state": "active", "version": null, "license_id": null, "type": null, "resources": [], "tags": ["Climate change", "Geological mapping", "Geology", "NERC_DDC"], "groups": [], "name": "1-1-5m-scale-geology-through-climate-change-map-covering-uk-mainland-northern-ireland-and-eire", "isopen": false, "license": null, "notes_rendered": "<p>1:1.5M scale \'Geology Through Climate Change\' map covering UK mainland, Northern Ireland and Eire. This poster map shows the rocks of Britain and Ireland in a new way, grouped and coloured according to the environment under which they were formed. Photographs illustrate modern-day environments, alongside images of the typical rock types which are formed in them. The ages of the rocks are shown in a timeline, which also shows global temperatures and sea levels changing through time. The changing positions of Britain and Ireland as they drifted northwards through geological time are illustrated too. It was jointly produced by the BGS, the Geological Survey of Northern Ireland and the Geological Survey of Ireland. It has been endorsed by a range of teaching organisations including WJEC, OCR, The Association of Teaching Organisations of Ireland and the Earth Science Teachers Association. Although primarily intended as a teaching resource, the poster map will be of interest to anyone seeking to understand the imprint geological time has left in the rocks of our islands. This poster map is free, all you pay is the postage and packing.\\n</p>", "url": null, "ckan_url": "http://releasetest.ckan.org/dataset/1-1-5m-scale-geology-through-climate-change-map-covering-uk-mainland-northern-ireland-and-eire", "notes": "1:1.5M scale \'Geology Through Climate Change\' map covering UK mainland, Northern Ireland and Eire. This poster map shows the rocks of Britain and Ireland in a new way, grouped and coloured according to the environment under which they were formed. Photographs illustrate modern-day environments, alongside images of the typical rock types which are formed in them. The ages of the rocks are shown in a timeline, which also shows global temperatures and sea levels changing through time. The changing positions of Britain and Ireland as they drifted northwards through geological time are illustrated too. It was jointly produced by the BGS, the Geological Survey of Northern Ireland and the Geological Survey of Ireland. It has been endorsed by a range of teaching organisations including WJEC, OCR, The Association of Teaching Organisations of Ireland and the Earth Science Teachers Association. Although primarily intended as a teaching resource, the poster map will be of interest to anyone seeking to understand the imprint geological time has left in the rocks of our islands. This poster map is free, all you pay is the postage and packing.", "license_title": null, "ratings_average": null, "extras": {"bbox-east-long": "180.0000", "temporal_coverage-from": "[]", "resource-type": "dataset", "bbox-north-lat": "90.0000", "coupled-resource": "[]", "guid": "9df8df53-2a24-37a8-e044-0003ba9b0d98", "bbox-south-lat": "-90.0000", "temporal_coverage-to": "[\\"2008\\"]", "spatial-reference-system": "urn:ogc:def:crs:EPSG::4326", "spatial": "{\\"type\\":\\"Polygon\\",\\"coordinates\\":[[[180.0000, -90.0000],[180.0000, 90.0000], [-180.0000, 90.0000], [-180.0000, -90.0000], [180.0000, -90.0000]]]}", "access_constraints": "[\\"copyright: The dataset is made freely available for access, e.g. via the Internet. Either no third party data / information is contained in the dataset or BGS has secured written permission from the owner(s) of any third party data / information contained in the dataset to make the dataset freely accessible.\\", \\"The poster is copyright of NERC, copyright of Geological Survey of Ireland and copyright of Geological Survey of Northern Ireland.\\"]", "contact-email": "enquiries@bgs.ac.uk", "bbox-west-long": "-180.0000", "metadata-date": "2011-12-16T17:19:00", "dataset-reference-date": "[{\\"type\\": \\"publication\\", \\"value\\": \\"2008\\"}]", "published_by": 15004, "frequency-of-update": "asNeeded", "licence": "[]", "harvest_object_id": "56b36936-a369-4991-bd44-9e65e0ae146e", "responsible-party": "British Geological Survey (distributor)", "UKLP": "True", "spatial-data-service-type": "", "metadata-language": "eng"}, "ratings_count": 0, "title": "1:1.5M scale \'Geology Through Climate Change\' Map Covering UK mainland, Northern Ireland and Eire.", "revision_id": "37dfbc09-9d70-4839-86a0-7e33cde8299a"}')
+_UKLP_DATASET = json.loads('{"maintainer": null, "maintainer_email": null, "metadata_created": "2011-06-03T12:17:54.351438", "relationships": [], "metadata_modified": "2011-12-22T16:40:15.831307", "author": null, "author_email": null, "state": "active", "version": null, "license_id": null, "type": null, "resources": [], "tags": ["Climate change", "Geological mapping", "Geology", "NERC_DDC"], "groups": [], "name": "1-1-5m-scale-geology-through-climate-change-map-covering-uk-mainland-northern-ireland-and-eire", "isopen": false, "license": null, "notes_rendered": "<p>1:1.5M scale \'Geology Through Climate Change\' map covering UK mainland, Northern Ireland and Eire. This poster map shows the rocks of Britain and Ireland in a new way, grouped and coloured according to the environment under which they were formed. Photographs illustrate modern-day environments, alongside images of the typical rock types which are formed in them. The ages of the rocks are shown in a timeline, which also shows global temperatures and sea levels changing through time. The changing positions of Britain and Ireland as they drifted northwards through geological time are illustrated too. It was jointly produced by the BGS, the Geological Survey of Northern Ireland and the Geological Survey of Ireland. It has been endorsed by a range of teaching organisations including WJEC, OCR, The Association of Teaching Organisations of Ireland and the Earth Science Teachers Association. Although primarily intended as a teaching resource, the poster map will be of interest to anyone seeking to understand the imprint geological time has left in the rocks of our islands. This poster map is free, all you pay is the postage and packing.\\n</p>", "url": null, "ckan_url": "http://releasetest.ckan.org/dataset/1-1-5m-scale-geology-through-climate-change-map-covering-uk-mainland-northern-ireland-and-eire", "notes": "1:1.5M scale \'Geology Through Climate Change\' map covering UK mainland, Northern Ireland and Eire. This poster map shows the rocks of Britain and Ireland in a new way, grouped and coloured according to the environment under which they were formed. Photographs illustrate modern-day environments, alongside images of the typical rock types which are formed in them. The ages of the rocks are shown in a timeline, which also shows global temperatures and sea levels changing through time. The changing positions of Britain and Ireland as they drifted northwards through geological time are illustrated too. It was jointly produced by the BGS, the Geological Survey of Northern Ireland and the Geological Survey of Ireland. It has been endorsed by a range of teaching organisations including WJEC, OCR, The Association of Teaching Organisations of Ireland and the Earth Science Teachers Association. Although primarily intended as a teaching resource, the poster map will be of interest to anyone seeking to understand the imprint geological time has left in the rocks of our islands. This poster map is free, all you pay is the postage and packing.", "license_title": null, "ratings_average": null, "extras": {"bbox-east-long": "180.0000", "temporal_coverage-from": "[]", "resource-type": "dataset", "bbox-north-lat": "90.0000", "coupled-resource": "[]", "guid": "9df8df53-2a24-37a8-e044-0003ba9b0d98", "bbox-south-lat": "-90.0000", "temporal_coverage-to": "[\\"2008\\"]", "spatial-reference-system": "urn:ogc:def:crs:EPSG::4326", "spatial": "{\\"type\\":\\"Polygon\\",\\"coordinates\\":[[[180.0000, -90.0000],[180.0000, 90.0000], [-180.0000, 90.0000], [-180.0000, -90.0000], [180.0000, -90.0000]]]}", "licence": "[\\"copyright: The dataset is made freely available for access, e.g. via the Internet. Either no third party data / information is contained in the dataset or BGS has secured written permission from the owner(s) of any third party data / information contained in the dataset to make the dataset freely accessible.\\", \\"The poster is copyright of NERC, copyright of Geological Survey of Ireland and copyright of Geological Survey of Northern Ireland.\\"]", "contact-email": "enquiries@bgs.ac.uk", "bbox-west-long": "-180.0000", "metadata-date": "2011-12-16T17:19:00", "dataset-reference-date": "[{\\"type\\": \\"publication\\", \\"value\\": \\"2008\\"}]", "published_by": 15004, "frequency-of-update": "asNeeded", "harvest_object_id": "56b36936-a369-4991-bd44-9e65e0ae146e", "responsible-party": "British Geological Survey (distributor)", "UKLP": "True", "spatial-data-service-type": "", "metadata-language": "eng"}, "ratings_count": 0, "title": "1:1.5M scale \'Geology Through Climate Change\' Map Covering UK mainland, Northern Ireland and Eire.", "revision_id": "37dfbc09-9d70-4839-86a0-7e33cde8299a"}')

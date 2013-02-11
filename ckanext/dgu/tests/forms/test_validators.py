@@ -436,56 +436,47 @@ class TestRemoveBlankResources:
         assert_equal(errors, expected_errors)
     
 class TestValidateLicense:
-    def check(self, license_id, access_constraints, expected_data, expected_errors):
+    def check(self, license_id, licence, expected_data, expected_errors):
         errors = {}
         data = {('license_id',):license_id,
-                ('access_constraints',):access_constraints}
+                ('licence',):licence}
         errors = {('license_id',):None,
-                ('access_constraints',):None}
+                ('licence',):None}
         validate_license(key=None, data=data, errors=errors, context=None)
         assert_equal(data, expected_data)
         assert_equal(errors, expected_errors)
 
-# DR: These are the rules from the validate_license docstring.
-#     * The first case is clear and that is what is tested mainly.
-    '''
-    Validation rules must be true to validate:
-
-     license_id == ''                             => access_constraints != ''
-     license_id != '__extra__' ^ license_id != '' => access_constraints == ''
-
-    Additional transformations occur:
-
-     license_id == '__extra__' => licence_id := None
-     access_constraints != ''    => license_id := access_constraints
-     access_constraints is DROPPED
-    '''
-#     * license_id == '__extra__' occurs when editing a record that was
-#     harvested and the license text is in package.extra['licence']
-#     * I don't know why free text gets put in the license_id field - seems
-#     wrong, so I will change this as part of #308.
     def test_form_dropdown(self):
-        self.check('uk-ogl', '',
-                   {('license_id',): 'uk-ogl'},
+        self.check('uk-ogl', None,
+                   {('license_id',): 'uk-ogl', ('licence',): None},
+                   {('license_id',): None})
+
+    def test_form_dropdown(self):
+        self.check('cc-by', None,
+                   {('license_id',): 'cc-by', ('licence',): None},
                    {('license_id',): None})
 
     def test_form_free_text(self):
         self.check('', 'Free form',
-                   {('license_id',): 'Free form'},
+                   {('license_id',): None, ('licence',): 'Free form'},
+                   {('license_id',): None})
+
+    def test_form_free_text_title(self):
+        self.check('', 'uk open government licence (ogl)',
+                   {('license_id',): 'uk-ogl', ('licence',): None},
+                   {('license_id',): None})
+
+    def test_form_free_text_id(self):
+        self.check('', 'uk-ogl',
+                   {('license_id',): 'uk-ogl', ('licence',): None},
                    {('license_id',): None})
 
     def test_blank(self):
         self.check('', '',
-                   {('license_id',): ''},
-                   {('license_id',): ['Please enter the access constraints.']})
+                   {('license_id',): None, ('licence',): None},
+                   {('license_id',): ['Please provide the licence.']})
 
-    def test_harvested_license(self):
-        # A harvested dataset has license as free form text and it lives
-        # in package.extra['licence'], which
-        # is not displayed in the license part of the form (only under
-        # extras) and is not validated by validate_license.
-        self.check('__extra__', '',
-                   {('license_id',): None, ('access_constraints',): ''},
-                   {('license_id',): None, ('access_constraints',): None})
-        # I don't know why access_constraints pops up in these results - does
-        # that delete the extra?!
+    def test_both_boxes_filled(self):
+        self.check('uk-ogl', 'Free form',
+                   {('license_id',): 'uk-ogl', ('licence',): None},
+                   {('license_id',): None})

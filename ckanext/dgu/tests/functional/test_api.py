@@ -1,5 +1,7 @@
 import copy
+
 from nose.tools import assert_equal
+from nose.plugins.skip import SkipTest
 
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
@@ -65,6 +67,7 @@ class TestRestApi(ControllerTestCase):
     def test_create_package(self):
         test_pkg = self.get_package_fixture('test1')
         offset = '/api/rest/package'
+        print test_pkg
         postparams = '%s=1' % json.dumps(test_pkg)
         result = self.app.post(offset, postparams, status=[201], extra_environ=self.extra_environ_sysadmin)
 
@@ -124,6 +127,8 @@ class TestRestApi(ControllerTestCase):
         assert_equal(set([tag['name'] for tag in pkg_dict['tags']]), set(test_pkg['tags']))
 
     def test_create_permissions(self):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for permissions, which uses publisher tree hierarchical query")
         def assert_create(user_name, publisher_name, status=201):
             test_pkg = self.get_package_fixture('test2' + user_name + publisher_name)
             test_pkg['groups'] = [publisher_name] if publisher_name else []
@@ -154,6 +159,8 @@ class TestRestApi(ControllerTestCase):
         assert_cannot_create('', 'national-health-service')
 
     def test_edit_permissions(self):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for permissions, which uses publisher tree hierarchical query")
         def assert_edit(user_name, publisher_name, status=200):
             # create a package to edit
             pkg_name = 'test3' + user_name + publisher_name

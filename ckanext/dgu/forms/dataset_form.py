@@ -173,7 +173,7 @@ class DatasetForm(SingletonPlugin):
             'theme-primary': [ignore_missing, unicode, convert_to_extras],
             'temporal_coverage-from': [ignore_missing, unicode, convert_to_extras],
             'temporal_coverage-to': [ignore_missing, unicode, convert_to_extras],
-            'access_constraints': [ignore_missing, unicode, convert_to_extras],
+#            'licence': [ignore_missing, unicode, convert_to_extras],
             'groups': {
                 'name': [ignore_missing, validate_group_id_or_name_exists_if_not_blank, unicode],
                 'id': [ignore_missing, unicode],
@@ -232,8 +232,8 @@ class DatasetForm(SingletonPlugin):
 
             'published_via': [ignore_missing, unicode, convert_to_extras],
             'mandate': [ignore_missing, unicode, convert_to_extras],
-            'license_id': [unicode],
-            'access_constraints': [ignore_missing, unicode],
+            'license_id': [ignore_missing, unicode],
+            'licence': [ignore_missing, unicode, convert_to_extras],
 
             'tag_string': [ignore_missing, val.tag_string_convert],
             'national_statistic': [ignore_missing, convert_to_extras],
@@ -251,6 +251,7 @@ class DatasetForm(SingletonPlugin):
 
     def db_to_form_schema(data, package_type=None):
         schema = {
+            'licence': [convert_from_extras, ignore_missing],
             'date_released': [convert_from_extras, ignore_missing, date_to_form],
             'date_updated': [convert_from_extras, ignore_missing, date_to_form],
             'date_update_future': [convert_from_extras, ignore_missing, date_to_form],

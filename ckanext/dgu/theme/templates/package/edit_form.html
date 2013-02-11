@@ -36,7 +36,8 @@ if has_errors:
         'url': 'URL',
         'notes': 'Description',
         'theme-primary': 'Primary Theme',
-        'license_id': 'Licence'
+        'license_id': 'Licence',
+        'licence': 'Licence (other)',
   }
   field_error_key_map = {
         'group': 'publisher',
@@ -393,13 +394,9 @@ if has_errors:
   <h3>Licence</h3>
     <?python
       license_id = data.get('license_id', 'uk-ogl')
-      license_id_other = data.get('access_constraints', '')
+      licence = data.get('licence', '')
       available_license_ids = zip(*c.licenses)[1]
       is_other_license = license_id not in available_license_ids
-      try:
-        license_extra = c.pkg.extras.get('licence')
-      except:
-        license_extra = None
     ?>
 
     <div class="control-group">
@@ -410,22 +407,24 @@ if has_errors:
       <!--! An explanation of what's going on here...
            There are a few cases to handle here:
 
-            1. A new (creation) form: the options available to the user are
-               an OGL license or a free-text non-OGL license.  ie - OGL and
-               "Specify other" should be in the dropdown, and the
-               access_constraints field should contain the freetext (when it
-               applies).
+            1. A new (creation) form: the options available to the user are:
+               * OGL license;
+               * a free-text (non-open) license
 
-            2. An edition form with a license_id:  the options available to the
-               user are an OGL license; a free-text non-OGL license; and the
-               dataset's current license.
+            2. An edit form with an existing license_id value. 
+               The options available to the user are:
+               * OGL license;
+               * the dataset's existing license_id
+               * a free-text (non-open) license
 
-            3. An edition form with a license in the extra fields: this is a
-               harvested dataset.  As such, the license should not be editable,
-               but we do want to display its value.
+            3. An edit form with an existing free-form licence value. 
+               The options available to the user are:
+               * OGL license;
+               * a free-text (non-open) license, defaulted with the current value
 
-            * license_extra implies an edition form with a license in the
-              extra fields.  ie - a harvested license.
+            A drop-down is used for the license-id values. It also contains 
+            "Specify other", which when selected enables the textarea for the
+            free text licence value.
      -->
 
       <py:if test="not is_edit_form">
@@ -435,7 +434,7 @@ if has_errors:
         </py:for>
       </py:if>
 
-      <py:if test="not license_extra and is_edit_form">
+      <py:if test="is_edit_form">
         <!-- If this is an edit form, then we want to offer the current license
              in the dropdown, unless it's a free-text license -->
         <?python
@@ -446,8 +445,7 @@ if has_errors:
         </py:for>
       </py:if>
 
-      <option py:if="license_extra" value="__extra__" selected="selected">Harvested license...</option>
-      <option py:if="not license_extra" value="" py:attrs="{'selected': 'selected' if is_other_license else None}">Specify other...</option>
+      <option value="" py:attrs="{'selected': 'selected' if is_other_license else None}">Specify other...</option>
 
     </select>
     <p class="instructions basic">The licence under which the dataset is released.</p>
@@ -456,11 +454,9 @@ if has_errors:
     </div>
 
     <div class="control-group choose-other-licence">
-      <label class="control-label" for="license_extra">Licence (other):</label>
+      <label class="control-label" for="licence">Licence (other):</label>
       <div class="controls">
-        <textarea py:if="not license_extra" rows="1" cols="60" id="access_constraints" name="access_constraints">${license_id_other if license_id_other else (license_id if is_other_license else '')}</textarea>
-        <textarea py:if="license_extra" rows="1" cols="60" id="access_constraints" name="license_extra" disabled="disabled">${license_extra}</textarea>
-        <input py:if="license_extra" rows="10" cols="60" id="actual_access_constraints" name="access_constraints" type="hidden" value="${c.pkg.extras.get('access_constraints','')}"/>
+        <textarea rows="1" cols="60" id="licence" name="licence">${licence if licence else (license_id if is_other_license else '')}</textarea>
 
         <p py:if="errors.get('license_id')" class="field_error" style="display: block;">${errors.get('license_id','')}</p>
       </div>

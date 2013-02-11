@@ -84,8 +84,15 @@ def dgu_package_create(context, data_dict):
         package_group_names = [pub['name'] for pub in data_dict['groups']]
     else:
         # Just get the group name in the rest interface and make sure it is a list
-        # so that the intersection works on names (rather than the decomposed name)
-        package_group_names = [data_dict['groups']]
+        # so that the intersection works on names.
+        # Note in this test, data_dict['groups'] = ["barnsley-primary-care-trust"]
+        # tests/functional/test_api.py:TestRestApi.test_create_permissions
+        # but there is suggestion that there are circumstances then groups
+        # is just a string so needs converting to a list.
+        if isinstance(data_dict['groups'], basestring):
+            package_group_names = [data_dict['groups']]
+        else:
+            package_group_names = data_dict['groups']
 
     # If the user has a group (is a publisher), but there is no package
     # group name, then we need to continue to allow validation to cause the

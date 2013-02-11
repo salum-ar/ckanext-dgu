@@ -1,4 +1,5 @@
 from nose.tools import assert_equal, assert_raises
+from nose.plugins.skip import SkipTest
 
 from ckan import model
 from ckan.lib.create_test_data import CreateTestData
@@ -57,6 +58,8 @@ class TestEdit(WsgiAppCase, HtmlCheckMethods):
         assert_equal(publisher.extras['category'], 'grouping')
 
     def test_1_edit_publisher(self):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for permissions, which uses publisher tree hierarchical query")
         # Load form
         publisher_name = 'national-health-service'
         group = model.Group.by_name(publisher_name)
@@ -148,6 +151,8 @@ class TestEdit(WsgiAppCase, HtmlCheckMethods):
         assert_equal(form['abbreviation'].value, 'tn2')
 
     def test_2_edit_validation_error(self):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for permissions, which uses publisher tree hierarchical query")
         # Load form
         publisher_name = 'national-health-service'
         group = model.Group.by_name(publisher_name)
@@ -187,6 +192,8 @@ class TestEdit(WsgiAppCase, HtmlCheckMethods):
         assert_equal(form['abbreviation'].value, 'tn2')
 
     def test_2_edit_publisher_does_not_affect_others(self):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for permissions, which uses publisher tree hierarchical query")
         publisher_name = 'national-health-service'
         def check_related_publisher_properties():
             group = model.Group.by_name(publisher_name)
@@ -230,6 +237,8 @@ class TestEdit(WsgiAppCase, HtmlCheckMethods):
         res = self.app.get(offset, status=404)
 
     def test_4_delete_publisher(self):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for permissions, which uses publisher tree hierarchical query")
         group_name = 'deletetest'
         CreateTestData.create_groups([{'name': group_name,
                                        'packages': [u'cabinet-office-energy-use']}],
@@ -253,6 +262,8 @@ class TestEdit(WsgiAppCase, HtmlCheckMethods):
         res = self.app.get(offset, status=401)
 
     def test_5_appoint_editor(self):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for permissions, which uses publisher tree hierarchical query")
         publisher_name = 'national-health-service'
         def check_related_publisher_properties():
             group = model.Group.by_name(publisher_name)
@@ -334,6 +345,7 @@ class TestApply(WsgiAppCase, HtmlCheckMethods, SmtpServerHarness):
         assert_equal(len(msgs), 1)
         msg = msgs[0]
         assert_equal(msg[1], 'info@test.ckan.net') # from (ckan.mail_from in ckan/test-core.ini)
+        print msg
         assert_equal(msg[2], ["coffice@gov.uk"]) # to (dgu.admin.name/email in dgu/test-core.ini)
 
     def assert_application_sent_to_right_person(self, publisher_name, to_email_addresses):

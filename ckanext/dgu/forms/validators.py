@@ -66,37 +66,50 @@ def populate_from_publisher_if_missing(key, data, errors, context):
 def validate_license(key, data, errors, context):
     """
     Validates the selected license options.
-
-    Validation rules must be true to validate:
-
-     license_id == ''                             => access_constraints != ''
-     license_id != '__extra__' ^ license_id != '' => access_constraints == ''
-
-    Additional transformations occur:
-
-     license_id == '__extra__' => licence_id := None
-     access_constraints != ''    => license_id := access_constraints
-     access_constraints is DROPPED
-
     """
-    if data[('license_id',)]== '__extra__': # harvested dataset
-        data[('license_id',)] = None
-        return
-    
-    license_id = bool(data[('license_id',)])
-    license_id_other = bool(data[('access_constraints',)])
+    from ckan import model
+    license_id = data[('license_id',)] or None
+    licence = (data[('licence',)] or '').strip() or None
 
-    if not (license_id ^ license_id_other):
+    if license_id and licence:
+        licence = None # license_id takes preference. The form hides the
+                       # value of licence in this case anyway.
+    if (not license_id) and (not licence):
+        errors[('license_id',)] = ['Please provide the licence.']
+    elif licence:
+        # Try to convert the licence to licence_id if possible. We don't
+        # want to encourage people to use licenses other than OGL, so don't put
+        # them in the drop-down, but if they name a licence that is in the
+        # License registry exactly then we should store the id. This helps
+        # identify if it is an open license.
+        license_id = find_license(licence)
         if license_id:
-            errors[('license_id',)] = ['Leave the "Access Constraints" box empty if '
-                                       'selecting a license from the list']
-        else:
-            errors[('license_id',)] = ['Please enter the access constraints.']
+            license_id = license_id
+            licence = None
+    elif license_id:
+        # Check the license_id is valid
+        if not model.Package.get_license_register().get(license_id):
+            errors[('license_id',)] = ['Licence option not found.']
 
-    if not license_id:
-        data[('license_id',)] = data[('access_constraints',)] 
-    del data[('access_constraints',)]
-    del errors[('access_constraints',)]
+    data[('license_id',)] = license_id # '' -> None
+    data[('licence',)] = licence
+
+    del errors[('licence',)]
+
+def find_license(license_reference):
+    '''
+    Given a license ID or title, tries to find a matching license
+    from the registry.
+
+    Returns the license_id if found, otherwise None.
+    '''
+    from ckan import model
+    register = model.Package.get_license_register()
+    license_reference_lower = license_reference.lower().strip()
+    for licence in register.values():
+        if licence.id == license_reference or \
+           (licence.title or '').lower() == license_reference_lower:
+            return licence.id
 
 def validate_resources(key, data, errors, context):
     """

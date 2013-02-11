@@ -1,4 +1,6 @@
 from nose.tools import assert_equal
+from nose.plugins.skip import SkipTest
+
 from ckan import model
 from ckanext.dgu.lib.publisher import *
 from ckanext.dgu.testtools.create_test_data import DguCreateTestData
@@ -131,6 +133,8 @@ class TestGoUpTree:
 class TestGoDownTree:
     @classmethod
     def setup_class(cls):
+        if model.engine_is_sqlite():
+            raise SkipTest("Need postgres for publisher tree hierarchical query")
         DguCreateTestData.create_dgu_test_data()
 
     @classmethod

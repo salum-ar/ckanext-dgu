@@ -80,9 +80,11 @@ class PublisherController(GroupController):
         for publisher in go_up_tree(group):
             admins = publisher.members_of_type(model.User, 'admin').all()
             if admins:
-                recipients = [(u.fullname,u.email) for u in admins]
-                recipient_publisher = publisher.title
-                break
+                recipients = [(u.fullname,u.email) for u in admins \
+                              if u.email]
+                if recipients:
+                    recipient_publisher = publisher.title
+                    break
         if not recipients:
             if not config.get('dgu.admin.email'):
                 log.error('User "%s" prevented from applying for publisher access for "%s" '
