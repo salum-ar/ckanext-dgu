@@ -13,12 +13,12 @@
 
   <py:def function="page_title">${c.pkg_dict.get('title', c.pkg_dict['name'])}
   - Datasets</py:def>
-  
+
   <py:def function="content_class"><!--unboxed--></py:def>
 
   <xi:include href="sidebar.html"/>
 
-  <div py:match="content">
+  <div py:match="content" class="package">
     <h1>${c.pkg_dict.get('title', c.pkg_dict['name'])}</h1>
 
     <div py:if="c.pkg_dict.get('state') != 'active'" class="state-box boxed">

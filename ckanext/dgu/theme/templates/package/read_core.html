@@ -16,7 +16,14 @@ import ckanext.dgu.lib.helpers as dgu_helpers
 
       <!-- Description -->
       <div py:if="str(c.pkg_notes_formatted).strip()">
-        <h3>Description</h3>
+        <h3>Description
+
+          <py:if test="h.issues_installed">
+            <xi:include href="../issues/issues_util.html" />
+            ${add_issue_button(c.pkg,'float:right;')}
+          </py:if>
+        </h3>
+
         <!--! Optional logo -->
         <div py:if="dataset_type == 'ons' and pkg_extras.get('national_statistic', '').lower() == 'yes'">
           <a href="http://www.statistics.gov.uk/hub/what-are-national-statistics-/index.html">
@@ -35,6 +42,7 @@ import ckanext.dgu.lib.helpers as dgu_helpers
 
       <!-- Resources -->
       <div id="dataset-resources" class="resources subsection">
+
         <py:if test="individual_resources or not timeseries_resources">
           <h3>Data Resources (${len(individual_resources)})</h3>
 
