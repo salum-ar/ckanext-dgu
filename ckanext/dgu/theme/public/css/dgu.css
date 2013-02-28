@@ -1621,3 +1621,20 @@ table.error-details {
 .popular_datasets p {
     margin-top: 8px;
 }
+
+
+.sidebar-publisher-report .alert {
+  margin: 9px 0;
+  padding-right: 12px;
+}
+.sidebar-publisher-report .alert a {
+  float: right;
+  display: block;
+  color: #777;
+  border-bottom: 1px dashed #777;
+  margin-left: 10px;
+}
+.sidebar-publisher-report .alert a:hover {
+  border-bottom: 1px solid #777;
+  text-decoration: none;
+}
