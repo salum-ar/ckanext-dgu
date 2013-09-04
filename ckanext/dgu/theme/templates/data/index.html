@@ -23,6 +23,17 @@
         </td>
         <td class="gutter"></td>
         <td class="boxed">
+<!--!
+          <div class="pull-right">
+            <a href="/data/themes" class="btn btn-primary viewall">View all themes</a>
+          </div>
+          <h2>Themes</h2>
+          <div id="tagcloud" py:with="theme_count=h.themes_count()">
+            <py:for each="dbname,displayname in sorted(h.themes_displayname().iteritems(),key=lambda x:x[1])">
+            <a rel="${theme_count[dbname]}" title="${displayname}" href="${h.url_for(controller='package', action='search')}?theme-primary=${dbname}">${displayname}</a>
+            </py:for>
+          </div>
+-->
           <div class="pull-right">
             <a href="/data/tag" class="btn btn-primary viewall">View all tags</a>
           </div>
@@ -35,6 +46,7 @@
           <script type="text/javascript" charset="utf-8">
     /* Tag cloud */
     $.fn.tagcloud.defaults = {
+        /* size: {start: 12, end: 28, unit: "pt"},*/
       size: {start: 8, end: 24, unit: "pt"},
       color: {start: '#bbb', end: '#66aa44'}
     };

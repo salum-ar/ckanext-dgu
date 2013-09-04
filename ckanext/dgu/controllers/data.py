@@ -6,6 +6,7 @@ import re
 import sqlalchemy
 import urlparse
 
+from ckanext.dgu.schema import THEMES
 import ckan.authz
 from ckan.lib.base import BaseController, model, abort, h, g
 from ckanext.dgu.plugins_toolkit import request, c, render, _, NotAuthorized, get_action

@@ -18,6 +18,7 @@ import ckan.plugins.toolkit as t
 c = t.c
 from webhelpers.text import truncate
 from pylons import config
+from pylons import request
 
 from ckan.lib.helpers import icon, icon_html, json
 import ckan.lib.helpers
@@ -232,6 +233,13 @@ def get_from_flat_dict(list_of_dicts, key, default=None):
 
 def get_uklp_package_type(package):
     return get_from_flat_dict(package.get('extras', []), 'resource-type', '')
+
+def get_primary_theme(package):
+    return get_from_flat_dict(package.get('extras', []), 'theme-primary', '')
+
+def get_secondary_themes(package):
+    secondary_themes_raw = get_from_flat_dict(package.get('extras', []), 'theme-secondary', '')
+    return secondary_themes({'theme-secondary':secondary_themes_raw})
 
 def is_service(package):
     res_type = get_uklp_package_type(package)
@@ -680,6 +688,7 @@ def get_package_fields(package, pkg_extras, dataset_type):
     from ckan.lib.field_types import DateType
     from ckanext.dgu.schema import GeoCoverageType
     from ckanext.dgu.lib.resource_helpers import DatasetFieldNames, DisplayableFields
+    from ckanext.dgu.schema import THEMES
 
     field_names = DatasetFieldNames()
     field_names_display_only_if_value = ['date_update_future', 'precision', 'update_frequency', 'temporal_granularity', 'taxonomy_url'] # (mostly deprecated) extra field names, but display values anyway if the metadata is there
@@ -741,15 +750,19 @@ def get_package_fields(package, pkg_extras, dataset_type):
     if taxonomy_url and taxonomy_url.startswith('http'):
         taxonomy_url = h.link_to(truncate(taxonomy_url, 70), taxonomy_url)
     primary_theme = pkg_extras.get('theme-primary') or ''
+    primary_theme = THEMES.get(primary_theme, primary_theme)
     secondary_themes = pkg_extras.get('theme-secondary')
     if secondary_themes:
         try:
             # JSON for multiple values
-            secondary_themes = ', '.join(json.loads(secondary_themes))
+            secondary_themes = ', '.join(
+                [THEMES.get(theme, theme) \
+                 for theme in json.loads(secondary_themes)])
         except ValueError:
             # string for single value
             secondary_themes = str(secondary_themes)
-
+            secondary_themes = THEMES.get(secondary_themes,
+                                          secondary_themes)
     field_value_map = {
         # field_name : {display info}
         'state': {'label': 'State', 'value': c.pkg.state},
@@ -1384,6 +1397,10 @@ def render_facet_key(key,value=None):
         return 'Type'
     if key=='resource-type' or key=='spatial-data-service-type':
         return 'UKLP Type'
+    if key=='all_themes':
+        return 'Theme'
+    if key=='theme-primary':
+        return 'Primary Theme'
     # Delegate to core CKAN
     return ckan.lib.helpers.facet_title(key)
 
@@ -1428,6 +1445,9 @@ def render_facet_value(key,value):
                 'discovery' : 'Discovery',
             }
         return mapping.get(value,value)
+    if key=='theme-primary' or key=='all_themes':
+        from ckanext.dgu.schema import THEMES
+        return THEMES.get(value,value)
     return value
 
 def social_url_twitter(url,title):
@@ -1467,6 +1487,27 @@ def get_shared_assets_timestamp():
             log.error('failed to load shared assets timestamp: %s' % e)
             shared_assets_timestamp = '-1'
     return shared_assets_timestamp
+
+def search_theme_mode_primary():
+    # Return True if searching by Primary Theme.
+    return 'theme-primary' in request.params.keys()
+
+def search_theme_mode_secondary():
+    # Return True if searching by Any Theme.
+    return (not search_theme_mode_primary()) and 'all_themes' in request.params.keys()
+
+def search_theme_mode_none():
+    # True when no Theme facet is active.
+    # The user can select whether their Theme facet is restricted to the _primary_ theme.
+    return not (search_theme_mode_primary() or search_theme_mode_secondary())
+
+def search_theme_mode_attrs():
+    out = {}
+    if not search_theme_mode_none():
+        out['disabled'] = 'disabled'
+    if not search_theme_mode_secondary():
+        out['checked'] = 'checked'
+    return out
 
 def get_package_from_id(id):
     from ckan.model import Package
@@ -1587,6 +1628,23 @@ def upsert_extra(extras_dict_list, key, value):
         extras_dict_list.append({'key': key,
                                  'value': value})
 
+def themes_count():
+    from ckanext.dgu.schema import THEMES
+    from ckan import model
+    theme_count = {}
+    for theme in THEMES.keys():
+        count = model.Session.query(model.Package)\
+            .join(model.PackageExtra)\
+            .filter(model.PackageExtra.key=='theme-primary')\
+            .filter(model.PackageExtra.value==theme)\
+            .filter(model.Package.state=='active').count()
+        theme_count[theme] = count
+    return theme_count
+
+def themes_displayname():
+    from ckanext.dgu.schema import THEMES
+    return THEMES
+
 def span_read_more(text, word_limit, classes=""):
     trimmed = truncate(text,length=word_limit,whole_word=True)
     if trimmed==text:
@@ -1611,5 +1669,4 @@ def render_db_date(db_date_str):
         return DateType.db_to_form(db_date_str)
     except DateConvertError:
         return ''
-
 

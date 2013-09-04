@@ -134,6 +134,9 @@
     <field name="groups" type="string" indexed="true" stored="true" multiValued="true"/>
     <field name="group_titles" type="text" indexed="true" stored="true" multiValued="true"/>
     <field name="group_abbreviation" type="text" indexed="true" stored="true" multiValued="true"/>
+    <field name="inventory" type="boolean" indexed="true" stored="true" multiValued="true"/>
+
+    <field name="all_themes" type="string" indexed="true" stored="true" multiValued="true"/>
 
     <field name="capacity" type="string" indexed="true" stored="true" multiValued="false"/>
 
@@ -165,6 +168,7 @@
 
     <field name="metadata_created" type="date" indexed="true" stored="true" multiValued="false"/>
     <field name="metadata_modified" type="date" indexed="true" stored="true" multiValued="false"/>
+    <field name="last_major_modification" type="date" indexed="true" stored="true" multiValued="false"/>
 
     <field name="indexed_ts" type="date" indexed="true" stored="true" default="NOW" multiValued="false"/>
 

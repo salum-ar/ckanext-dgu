@@ -88,6 +88,21 @@ jQuery(function () {
       $('#'+id+'-items').toggle('fast');
     });
 
+    $('.read-more-parent .link-read-more, .read-more-parent .link-read-less').click(function(e) {
+      e.preventDefault();
+      var target = $(e.delegateTarget);
+      var expand = target.hasClass('link-read-more');
+      var parentElement = target.parents('.read-more-parent');
+      if (expand) {
+        parentElement.find('.expanded').show('fast');
+        parentElement.find('.collapsed').hide();
+      }
+      else {
+        parentElement.find('.collapsed').show('fast');
+        parentElement.find('.expanded').hide();
+      }
+    });
+
     $('select[name="dataset-results-sort"]').change(function(e){
       e.preventDefault();
       window.location = $(this).val() + '#search-sort-by';
@@ -104,11 +119,19 @@ jQuery(function () {
     });
   });
 
+  $('input#search-theme-mode').change( CKAN.Dgu.toggleSearchThemeMode );
 });
 
 var CKAN = CKAN || {};
 
 CKAN.Dgu = function($, my) {
+
+  my.toggleSearchThemeMode = function(e) {
+    var isChecked = !!( $(e.delegateTarget).attr('checked') );
+    console.log(isChecked);
+    $('.facets-theme-primary').addClass(isChecked?'enabled':'disabled').removeClass(isChecked?'disabled':'enabled');
+    $('.facets-theme-all').addClass(isChecked?'disabled':'enabled').removeClass(isChecked?'enabled':'disabled');
+  };
 
   my.setupEditorDialogs = function() {
     // Bind to the 'save' button, which writes values back to the document

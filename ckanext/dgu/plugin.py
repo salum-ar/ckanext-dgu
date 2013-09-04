@@ -130,6 +130,10 @@ class ThemePlugin(SingletonPlugin):
         map.connect('reports', '/data/reports', controller=reports_controller, action='resources')
         map.connect('/data/resource_cache/{root}/{resource_id}/{filename}', controller=data_controller, action='resource_cache')
 
+        theme_controller = 'ckanext.dgu.controllers.theme:ThemeController'
+        map.connect('/data/themes', controller=theme_controller, action='index')
+        map.connect('/data/themes/{name}', controller=theme_controller, action='named_theme')        
+
         # For test usage when Drupal is not running
         map.connect('/comment/get/{id}',
                     controller='ckanext.dgu.controllers.package:CommentProxy',
