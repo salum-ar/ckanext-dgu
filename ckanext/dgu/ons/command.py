@@ -1,6 +1,5 @@
 import datetime
 
-from ckanclient import CkanClient
 from ckanext.importlib.api_command import ApiCommand
 
 class OnsLoaderCmd(ApiCommand):
