@@ -91,7 +91,7 @@ class PublisherController(OrganizationController):
                           c.user, group.name)
                 h.flash_error(_("There is a problem with the system configuration"))
                 errors = {"reason": ["%s does not have an administrator user to contact" % group.name]}
-                return self.apply(group.id, data=data, errors=errors,
+                return self.apply(group.id, errors=errors,
                                   error_summary=error_summary(errors))
             recipients = [(config.get('dgu.admin.name', "DGU Admin"),
                            config['dgu.admin.email'])]
